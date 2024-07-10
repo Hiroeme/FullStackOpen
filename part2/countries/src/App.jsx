@@ -1,110 +1,121 @@
-import { useState, useEffect } from 'react'
-import axios from 'axios'
-import { Results } from './components/Results'
-import { ShowView } from './components/ShowView'
-import { Weather } from './components/Weather'
+import axios from "axios"
+import { useState, useEffect } from "react"
 
+const Country = ({country}) => {
 
-function App() {
-  const [searchValue, setSearchValue] = useState(null)
-  const [countries, setCountries] = useState(null)
-  const [results, setResults] = useState(null)
-  const [showCountry, setShowCountry] = useState(null)
   const [weather, setWeather] = useState(null)
 
-  // run once getAll from database
+  const languages = Object.values(country.languages)
+  const flagUrl = country.flags.png
+  const capital = country.capital[0]
+
+  // lets grab our weather data, runs when we get a country for one time
   useEffect(() => {
 
+    const lat = country.latlng[0]
+    const lng = country.latlng[1]
+
     axios
-      .get('https://studies.cs.helsinki.fi/restcountries/api/all')
+      .get(`https://api.weatherapi.com/v1/current.json?key=c663758c867f4d55838231739240907&q=${country.name.common}&aqi=no`)
       .then(response => {
-        setCountries(response.data)
-        // console.log(response.data)
+        setWeather(response.data)
       })
+      .catch(
+        console.log(`Unable to find weather data for ${country.name.common}`)
+      )
   }, [])
 
-  // called upon when searchValue is changed
-  useEffect(() => {
-
-    if (searchValue && countries) {
-      console.log("Our Searchvalue is ", searchValue)
-
-      setWeather(null)
-      setShowCountry(null)
-
-      const validCountries = countries.filter(country => country.name.common.toLowerCase().includes(searchValue.toLowerCase()))
-
-      setResults(validCountries)
-    }
-  }, [searchValue])
-
-  useEffect(() => {
-
-    if (results) {
-      if (results.length === 1) {
-
-        const lat = results[0].latlng[0]
-        const lon = results[0].latlng[1]
-
-        axios
-        .get(`https://api.weatherapi.com/v1/current.json?key=${import.meta.env.VITE_SOME_KEY}&q=${lat},${lon}&aqi=no`)
-        .then(response => {
-          setWeather(response.data)
-        })
-        .catch( response => {
-          console.log(response.response.data.error.message)
-      })
-      }
-    }
-
-
-  }, [results])
-
-
-  const searchHandler = (event) => {
-    // console.log(event.target.value)
-    setSearchValue(event.target.value)
+  // return null when we don't have our weather data yet
+  if (!weather) {
+    return null
   }
 
-  const showHandler = (country) => {
-    // console.log(country.name.common)
-    setShowCountry(country)
-  }
-
-  const weatherHandler = (country) => {
-    if (!country) {
-      return null
-    }
-    const lat = country.latlng[0]
-    const lon = country.latlng[1]
-
-    axios
-    .get(`https://api.weatherapi.com/v1/current.json?key=${import.meta.env.VITE_SOME_KEY}&q=${lat},${lon}&aqi=no`)
-    .then(response => {
-      setWeather(response.data)
-    })
-    .catch( response => {
-      console.log(response.response.data.error.message)
-  })
-  }
-
-  const viewHandler = (country) => () => {
-    showHandler(country)
-    weatherHandler(country)
-  }
-
+  const weatherIconUrl = weather.current.condition.icon
 
 
   return (
-    <>
-      <div>
-        find countries <input onChange={searchHandler}></input>
+    <div>
+      <h2>{country.name.common}</h2>
 
-        <Results countries={results} showHandler={viewHandler} weatherHandler={weatherHandler} />
-        <ShowView country={showCountry} countries={results} />
-        <Weather weather={weather} />
+      <p>population {country.population}</p>
+      <p>capital {capital}</p>
+
+      <h4>languages</h4>
+
+      <ul>
+        {languages.map(language => <li key={language}>{language}</li>)}  
+      </ul>
+
+      <img src={flagUrl} width='200' />
+
+      <h4>Weather in {capital}</h4>
+
+      <p>temperature {weather.current.temp_f} Fahreinheit</p>
+
+      <img src={weatherIconUrl} width='80' />
+
+      <p>wind {weather.current.wind_mph} mph</p>
+    </div>
+  )
+}
+
+
+
+const CountryList = ({countries, showCountry}) => {
+  if (countries.length > 10) {
+    return (
+      <div>
+        Too many matches, specify another filter
       </div>
-    </>
+    )
+  } 
+
+
+  if (countries.length === 1) {
+    return (
+      <Country country={countries[0]}/>
+    )
+  }
+
+  // this sets our search to just that country
+  return (
+    <div>
+      {countries.map(c => 
+        <p key={c.fifa}>
+          {c.name.common}
+          <button 
+            onClick={() => showCountry(c.name.common)}>
+            show </button>
+        </p>
+      )}
+    </div>
+  )
+
+
+}
+
+const App = () => {
+  const [search, setSearch] = useState('fi')
+  const [countries, setCountries] = useState([])
+
+  useEffect(() => {
+    axios.get('https://restcountries.com/v3.1/all').then(({ data }) => {
+      setCountries(data)
+    })
+  }, [])
+
+  const matchedContries = countries.filter(c => c.name.common.toLowerCase().includes(search.toLocaleLowerCase()))
+
+  return (
+    <div>
+      <div>
+        find country <input value={search} onChange={({ target }) => setSearch(target.value)} />
+      </div>
+      <CountryList 
+        countries={matchedContries}
+        showCountry={setSearch}
+      />
+    </div>
   )
 }
 
