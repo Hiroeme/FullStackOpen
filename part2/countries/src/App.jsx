@@ -16,7 +16,7 @@ const Country = ({country}) => {
     const lng = country.latlng[1]
 
     axios
-      .get(`https://api.weatherapi.com/v1/current.json?key=${APIKEY}&q=${country.name.common}&aqi=no`)
+      .get(`https://api.weatherapi.com/v1/current.json?key=${APP_KEY}&q=${country.name.common}&aqi=no`)
       .then(response => {
         setWeather(response.data)
       })
